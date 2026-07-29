@@ -1,0 +1,37 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS and editor cruft
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Media assets. The dashboard needs no video; the optional lesson player reads
+# static/lesson.mp4, which stays local rather than bloating the repository.
+*.mp4
+*.mov
+*.avi
+
+# Local datasets and archives. GitHub rejects blobs over 100 MB, and raw capture
+# data does not belong in source control.
+*.zip
+*.tar
+*.tar.gz
+*.h5
+*.npz
+
+# Spreadsheets: internal working material, not for publication.
+*.xlsx
+*.xls
+*.csv

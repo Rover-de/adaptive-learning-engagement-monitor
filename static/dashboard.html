@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ALEMS — Engagement Monitor</title>
+<style>
+  :root {
+    --bg: #0b0f17;
+    --panel: #131a26;
+    --panel-2: #1a2331;
+    --line: #243044;
+    --text: #e6edf7;
+    --muted: #7d8ba3;
+    --green: #3fd68c;
+    --amber: #f2c14e;
+    --red: #f2645a;
+    --blue: #58a6ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, sans-serif;
+    font-size: 14px;
+  }
+  .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--line);
+  }
+  header h1 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: .3px; }
+  header .sub { color: var(--muted); font-size: 12px; }
+  header .link { margin-left: auto; display: flex; gap: 16px; font-size: 12px; }
+  header .link a { color: var(--muted); text-decoration: none; }
+  header .link a:hover { color: var(--blue); }
+
+  main { padding: 20px 24px 40px; max-width: 1240px; }
+  .grid { display: grid; gap: 14px; }
+  .cols-2 { grid-template-columns: 1.15fr .85fr; }
+  .cols-4 { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 900px) { .cols-2, .cols-4 { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .panel h2 {
+    margin: 0 0 14px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .regime-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .badge {
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    border: 1px solid transparent;
+  }
+  .r-engaged { background: rgba(63,214,140,.14); color: var(--green); border-color: rgba(63,214,140,.35); }
+  .r-mild    { background: rgba(242,193,78,.14); color: var(--amber); border-color: rgba(242,193,78,.35); }
+  .r-high    { background: rgba(242,100,90,.14); color: var(--red);   border-color: rgba(242,100,90,.35); }
+  .r-none    { background: rgba(125,139,163,.12); color: var(--muted); border-color: rgba(125,139,163,.3); }
+
+  .tag { font-size: 11px; color: var(--muted); }
+  .tag b { color: var(--text); font-weight: 600; }
+
+  .stat { padding: 2px 0; }
+  .stat .label { font-size: 11px; color: var(--muted); margin-bottom: 5px; }
+  .stat .value { font-size: 25px; font-weight: 600; line-height: 1.1; }
+  .stat .unit { font-size: 12px; color: var(--muted); font-weight: 400; margin-left: 3px; }
+  .stat .note { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .stale { opacity: .45; }
+
+  canvas { width: 100%; height: 62px; display: block; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: right; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+  th:first-child, td:first-child { text-align: left; }
+  th { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  td { font-size: 13px; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  #preview {
+    width: 100%;
+    border-radius: 8px;
+    background: var(--panel-2);
+    display: block;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+  }
+  .conn { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .dot.ok { background: var(--green); }
+  .dot.err { background: var(--red); }
+  footer { color: var(--muted); font-size: 11px; padding: 0 24px 28px; max-width: 1240px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Adaptive Learning Engagement Monitoring System</h1>
+  <span class="sub mono" id="uptime">—</span>
+  <span class="link">
+    <span class="conn"><span class="dot" id="conn-dot"></span><span id="conn-text">connecting…</span></span>
+    <a href="/status" target="_blank">/status</a>
+    <a href="/metrics" target="_blank">/metrics</a>
+  </span>
+</header>
+
+<main class="grid">
+
+  <div class="panel">
+    <h2>Engagement regime</h2>
+    <div class="regime-row">
+      <span class="badge r-none" id="regime">INSUFFICIENT_DATA</span>
+      <span class="tag">instantaneous <b class="mono" id="raw-regime">—</b></span>
+      <span class="tag">published flips <b class="mono" id="flips">0</b></span>
+      <span class="tag">face lock <b class="mono" id="face">—</b></span>
+    </div>
+    <div class="tag" style="margin-top:12px">
+      The published label requires 3 consecutive agreeing observations before it moves.
+      Hysteresis trades a little lag for a large reduction in transition count.
+    </div>
+  </div>
+
+  <div class="grid cols-4">
+    <div class="panel stat" id="card-hr">
+      <div class="label">HEART RATE · spectral</div>
+      <div class="value mono"><span id="hr">—</span><span class="unit">bpm</span></div>
+      <div class="note">time domain <span class="mono" id="hr-peak">—</span></div>
+      <canvas id="spark-hr"></canvas>
+    </div>
+    <div class="panel stat" id="card-sqi">
+      <div class="label">SIGNAL QUALITY INDEX</div>
+      <div class="value mono"><span id="sqi">—</span></div>
+      <div class="note">gate at <span class="mono">0.30</span> · <span id="sqi-state">—</span></div>
+      <canvas id="spark-sqi"></canvas>
+    </div>
+    <div class="panel stat">
+      <div class="label">RMSSD</div>
+      <div class="value mono"><span id="rmssd">—</span><span class="unit">ms</span></div>
+      <div class="note">beat-to-beat dispersion</div>
+    </div>
+    <div class="panel stat">
+      <div class="label">BLINK RATE</div>
+      <div class="value mono"><span id="blink">—</span><span class="unit">/min</span></div>
+      <div class="note">60 s rolling window</div>
+    </div>
+  </div>
+
+  <div class="grid cols-2">
+    <div class="panel">
+      <h2>Pipeline latency — rolling percentiles</h2>
+      <table>
+        <thead>
+          <tr><th>Stage</th><th>n</th><th>p50</th><th>p95</th><th>p99</th><th>max</th></tr>
+        </thead>
+        <tbody id="lat-body">
+          <tr><td colspan="6" style="color:var(--muted);text-align:center;padding:18px">waiting for /metrics…</td></tr>
+        </tbody>
+      </table>
+      <div class="tag" style="margin-top:12px">
+        Milliseconds. Throughput <b class="mono" id="throughput">—</b> fps ·
+        capture <b class="mono" id="eff-fps">—</b> fps ·
+        frames <b class="mono" id="frames">—</b>.
+        A stall on one frame in fifty drops frames, and dropped frames bias the
+        frequency estimate — so percentiles are tracked, not means.
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Capture — forehead ROI</h2>
+      <img id="preview" src="/video_feed" alt="camera preview" />
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  Demonstration thresholds, not calibrated against labelled human data. No clinical use.
+</footer>
+
+<script>
+"use strict";
+
+// Mirrors SignalConfig.min_sqi. Estimates below this are rejected rather than
+// published, so the dashboard draws the same line the classifier applies.
+const MIN_SQI = 0.30;
+
+const STATUS_MS = 1000;
+const METRICS_MS = 2000;
+const HISTORY = 120;
+
+const REGIME_CLASS = {
+  ENGAGED: "r-engaged",
+  MILD_FATIGUE: "r-mild",
+  HIGH_FATIGUE: "r-high",
+  INSUFFICIENT_DATA: "r-none",
+};
+
+const $ = (id) => document.getElementById(id);
+const hrHistory = [];
+const sqiHistory = [];
+
+function fmt(value, digits, fallback = "—") {
+  return value === null || value === undefined ? fallback : value.toFixed(digits);
+}
+
+function setConnection(ok, message) {
+  $("conn-dot").className = "dot " + (ok ? "ok" : "err");
+  $("conn-text").textContent = message;
+}
+
+function drawSparkline(canvas, series, options) {
+  const ratio = window.devicePixelRatio || 1;
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+  if (!width || !height) return;
+
+  canvas.width = width * ratio;
+  canvas.height = height * ratio;
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+
+  const points = series.filter((v) => v !== null && v !== undefined);
+  if (points.length < 2) return;
+
+  // Fixed bounds keep the vertical scale comparable over time; an
+  // auto-scaled axis makes noise look like signal.
+  let lo = options.min !== undefined ? options.min : Math.min(...points);
+  let hi = options.max !== undefined ? options.max : Math.max(...points);
+  if (hi - lo < 1e-9) { lo -= 1; hi += 1; }
+
+  const pad = 3;
+  const xOf = (i) => (i / (HISTORY - 1)) * width;
+  const yOf = (v) => height - pad - ((v - lo) / (hi - lo)) * (height - 2 * pad);
+
+  if (options.threshold !== undefined) {
+    const y = yOf(options.threshold);
+    ctx.setLineDash([3, 3]);
+    ctx.strokeStyle = "rgba(125,139,163,.55)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  ctx.strokeStyle = options.color;
+  ctx.lineWidth = 1.6;
+  ctx.lineJoin = "round";
+  ctx.beginPath();
+  let started = false;
+  series.forEach((value, i) => {
+    if (value === null || value === undefined) { started = false; return; }
+    const x = xOf(i);
+    const y = yOf(Math.min(Math.max(value, lo), hi));
+    if (started) ctx.lineTo(x, y);
+    else { ctx.moveTo(x, y); started = true; }
+  });
+  ctx.stroke();
+}
+
+function push(series, value) {
+  series.push(value === undefined ? null : value);
+  while (series.length > HISTORY) series.shift();
+}
+
+function renderStatus(data) {
+  const regime = data.regime || "INSUFFICIENT_DATA";
+  const badge = $("regime");
+  badge.textContent = regime;
+  badge.className = "badge " + (REGIME_CLASS[regime] || "r-none");
+
+  $("raw-regime").textContent = data.raw_regime || "—";
+  $("flips").textContent = data.regime_flips ?? 0;
+  $("face").textContent = data.face_locked ? "yes" : "no";
+
+  $("hr").textContent = fmt(data.hr_bpm, 1);
+  $("hr-peak").textContent = data.hr_peak_bpm === null ? "—" : fmt(data.hr_peak_bpm, 1) + " bpm";
+  $("rmssd").textContent = fmt(data.rmssd_ms, 1);
+  $("blink").textContent = fmt(data.blink_rate_per_min, 0);
+  $("sqi").textContent = fmt(data.sqi, 3);
+  $("eff-fps").textContent = fmt(data.effective_fps, 1);
+
+  const gated = data.sqi !== null && data.sqi !== undefined && data.sqi < MIN_SQI;
+  $("sqi-state").textContent =
+    data.sqi === null || data.sqi === undefined ? "no estimate" : gated ? "rejected" : "accepted";
+  $("card-sqi").classList.toggle("stale", gated);
+  $("card-hr").classList.toggle("stale", gated);
+
+  push(hrHistory, data.hr_bpm);
+  push(sqiHistory, data.sqi);
+  drawSparkline($("spark-hr"), hrHistory, { color: "#58a6ff", min: 45, max: 120 });
+  drawSparkline($("spark-sqi"), sqiHistory, {
+    color: "#3fd68c", min: 0, max: 1, threshold: MIN_SQI,
+  });
+}
+
+function renderMetrics(data) {
+  $("throughput").textContent = fmt(data.throughput_fps, 1);
+  $("frames").textContent = data.frames_processed ?? "—";
+
+  const seconds = data.uptime_seconds || 0;
+  const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
+  const ss = String(Math.floor(seconds % 60)).padStart(2, "0");
+  $("uptime").textContent = "uptime " + mm + ":" + ss;
+
+  const rows = (data.stages || []).filter((s) => s.count > 0);
+  const body = $("lat-body");
+  if (rows.length === 0) {
+    body.innerHTML =
+      '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:18px">no samples yet</td></tr>';
+    return;
+  }
+
+  body.innerHTML = rows
+    .map(
+      (s) =>
+        "<tr><td>" + s.stage + "</td>" +
+        '<td class="mono">' + s.count + "</td>" +
+        '<td class="mono">' + fmt(s.p50_ms, 1) + "</td>" +
+        '<td class="mono">' + fmt(s.p95_ms, 1) + "</td>" +
+        '<td class="mono">' + fmt(s.p99_ms, 1) + "</td>" +
+        '<td class="mono">' + fmt(s.max_ms, 1) + "</td></tr>"
+    )
+    .join("");
+}
+
+async function poll(url, render, onError) {
+  try {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) throw new Error("HTTP " + response.status);
+    render(await response.json());
+    return true;
+  } catch (error) {
+    onError(error);
+    return false;
+  }
+}
+
+async function pollStatus() {
+  const ok = await poll("/status", renderStatus, () =>
+    setConnection(false, "cannot reach /status")
+  );
+  if (ok) setConnection(true, "live");
+}
+
+setInterval(pollStatus, STATUS_MS);
+setInterval(() => poll("/metrics", renderMetrics, () => {}), METRICS_MS);
+pollStatus();
+poll("/metrics", renderMetrics, () => {});
+
+window.addEventListener("resize", () => {
+  drawSparkline($("spark-hr"), hrHistory, { color: "#58a6ff", min: 45, max: 120 });
+  drawSparkline($("spark-sqi"), sqiHistory, {
+    color: "#3fd68c", min: 0, max: 1, threshold: MIN_SQI,
+  });
+});
+</script>
+</body>
+</html>

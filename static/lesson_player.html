@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>自适应教学视频示例</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 24px;
+      background: #0f172a;
+      color: #e5e7eb;
+    }
+    h1 {
+      margin-top: 0;
+      font-size: 20px;
+      color: #f9fafb;
+    }
+    .layout {
+      display: flex;
+      gap: 24px;
+    }
+    .left, .right {
+      flex: 1;
+      min-width: 0;
+    }
+    .right {
+      display: flex;
+      flex-direction: column;
+    }
+    video {
+      width: 100%;
+      max-height: 360px;
+      background: #020617;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.9);
+    }
+    .panel {
+      background: rgba(15, 23, 42, 0.95);
+      border-radius: 12px;
+      padding: 16px 18px;
+      box-shadow: 0 12px 40px rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+    .status-label {
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .status-badge {
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .status-normal {
+      background: rgba(22, 163, 74, 0.1);
+      color: #4ade80;
+      border: 1px solid rgba(74, 222, 128, 0.4);
+    }
+    .status-mild {
+      background: rgba(234, 179, 8, 0.08);
+      color: #facc15;
+      border: 1px solid rgba(250, 204, 21, 0.4);
+    }
+    .status-heavy {
+      background: rgba(248, 113, 113, 0.08);
+      color: #fca5a5;
+      border: 1px solid rgba(248, 113, 113, 0.45);
+    }
+    .status-unknown {
+      background: rgba(148, 163, 184, 0.08);
+      color: #cbd5f5;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 16px;
+      margin-top: 10px;
+      font-size: 13px;
+      color: #cbd5f5;
+    }
+    .metric-label {
+      color: #94a3b8;
+    }
+    .metric-value {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+        Consolas, "Liberation Mono", "Courier New", monospace;
+      color: #e5e7eb;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      color: #e5e7eb;
+    }
+    .pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 8px #22c55e;
+    }
+    .pill-dot-paused {
+      background: #eab308;
+      box-shadow: 0 0 8px #eab308;
+    }
+    .pill-dot-alert {
+      background: #ef4444;
+      box-shadow: 0 0 8px #ef4444;
+    }
+    .quiz-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+    .quiz-modal {
+      width: 380px;
+      max-width: 90vw;
+      background: #020617;
+      border-radius: 16px;
+      padding: 20px 22px 18px;
+      box-shadow: 0 24px 80px rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.45);
+    }
+    .quiz-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #f9fafb;
+    }
+    .quiz-desc {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 14px;
+    }
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+    .quiz-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.12s ease;
+      font-size: 13px;
+      color: #e5e7eb;
+    }
+    .quiz-option input {
+      accent-color: #38bdf8;
+    }
+    .quiz-option:hover {
+      background: rgba(15, 23, 42, 0.9);
+    }
+    .quiz-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    button {
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: none;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .btn-secondary {
+      background: rgba(15, 23, 42, 0.95);
+      color: #e5e7eb;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #0ea5e9, #22c55e);
+      color: #0b1120;
+    }
+    .note {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+  <h1>自适应教学视频示例（基于 rPPG + 眨眼状态）</h1>
+  <div class="layout">
+    <div class="left">
+      <div class="panel" style="margin-bottom: 14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <span class="status-label">教学视频</span>
+          <span id="connection-pill" class="pill">
+            <span id="connection-dot" class="pill-dot"></span>
+            <span id="connection-text">正在连接状态服务...</span>
+          </span>
+        </div>
+        
+        <video id="lessonVideo" controls>
+          <!-- 请将 lesson.mp4 放在与本 HTML 同一目录下，或修改 src 为你的教学视频地址 -->
+          <source src="/static/lesson.mp4" type="video/mp4" />
+          您的浏览器不支持 video 标签。
+        </video>
+        <div class="note">
+          提示：摄像头检测程序运行后，将根据 <code>/status</code> 返回的状态自动调整播放速度与弹出问答。
+        </div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="panel">
+        <div class="status-row">
+          <div class="status-label">当前学习状态</div>
+          <div id="statusBadge" class="status-badge status-unknown">数据不足</div>
+        </div>
+        <div class="metrics">
+          <div>
+            <div class="metric-label">心率 HR</div>
+            <div id="hrValue" class="metric-value">-- bpm</div>
+          </div>
+          <div>
+            <div class="metric-label">HRV (RMSSD)</div>
+            <div id="hrvValue" class="metric-value">-- ms</div>
+          </div>
+          <div>
+            <div class="metric-label">最近 60s 眨眼数</div>
+            <div id="blinkValue" class="metric-value">-- / min</div>
+          </div>
+          <div>
+            <div class="metric-label">当前播放速度</div>
+            <div id="speedValue" class="metric-value">1.0x</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:14px;">
+        <div style="margin-bottom:10px;">
+          实时摄像头
+        </div>
+        <img src="/video_feed" style="width:100%;border-radius:8px;" />  
+      </div>
+    </div>
+  </div>
+
+  <!-- 互动问答弹窗 -->
+  <div id="quizBackdrop" class="quiz-modal-backdrop">
+    <div class="quiz-modal">
+      <div class="quiz-title">小测一下：你刚刚在学什么？</div>
+      <div class="quiz-desc">
+        选择一个最接近你刚才看到的知识点的选项，帮助系统判断你是否真正理解内容。
+      </div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="quiz" value="a" />
+          <span>rPPG：通过相机提取面部血容量脉搏波估计 HR / HRV</span>
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="quiz" value="b" />
+          <span>传统鼠标轨迹分析，统计点击频率</span>
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="quiz" value="c" />
+          <span>只用键盘输入速度判断学习效果</span>
+        </label>
+      </div>
+      <div class="quiz-footer">
+        <button class="btn-secondary" id="quizSkipBtn">稍后再说</button>
+        <button class="btn-primary" id="quizSubmitBtn">提交答案</button>
+      </div>
+      <div id="quizFeedback" class="note"></div>
+    </div>
+  </div>
+
+  <script>
+    const STATUS_URL = "/status";
+    const POLL_INTERVAL_MS = 2000;
+
+    const video = document.getElementById("lessonVideo");
+    const statusBadge = document.getElementById("statusBadge");
+    const hrValue = document.getElementById("hrValue");
+    const hrvValue = document.getElementById("hrvValue");
+    const blinkValue = document.getElementById("blinkValue");
+    const speedValue = document.getElementById("speedValue");
+    const connectionPill = document.getElementById("connection-pill");
+    const connectionDot = document.getElementById("connection-dot");
+    const connectionText = document.getElementById("connection-text");
+
+    const quizBackdrop = document.getElementById("quizBackdrop");
+    const quizSubmitBtn = document.getElementById("quizSubmitBtn");
+    const quizSkipBtn = document.getElementById("quizSkipBtn");
+    const quizFeedback = document.getElementById("quizFeedback");
+
+    let quizVisible = false;
+
+    // 后端 /status 返回的 regime 枚举值到播放策略的映射。
+    const REGIME_POLICY = {
+      ENGAGED: {
+        label: "专注",
+        badgeClass: "status-normal",
+        rate: 1.15,
+        dotClass: "pill-dot",
+        message: "学习状态：专注",
+      },
+      MILD_FATIGUE: {
+        label: "轻度疲劳",
+        badgeClass: "status-mild",
+        rate: 0.9,
+        dotClass: "pill-dot pill-dot-paused",
+        message: "学习状态：轻度疲劳，已减速播放",
+      },
+      HIGH_FATIGUE: {
+        label: "明显疲劳",
+        badgeClass: "status-heavy",
+        rate: 0.8,
+        dotClass: "pill-dot pill-dot-alert",
+        message: "学习状态：明显疲劳 / 认知超载",
+        pause: true,
+      },
+      INSUFFICIENT_DATA: {
+        label: "数据不足",
+        badgeClass: "status-unknown",
+        rate: 1.0,
+        dotClass: "pill-dot pill-dot-paused",
+        message: "等待稳定的生理信号...",
+      },
+    };
+
+    function policyFor(regime) {
+      return REGIME_POLICY[regime] || REGIME_POLICY.INSUFFICIENT_DATA;
+    }
+
+    function updateBadge(policy) {
+      statusBadge.textContent = policy.label;
+      statusBadge.className = "status-badge " + policy.badgeClass;
+    }
+
+    function setPlaybackForStatus(policy) {
+      if (!video) return;
+
+      const rate = policy.rate;
+
+      if (policy.pause && !video.paused && !quizVisible) {
+        video.pause();
+        showQuizModal();
+      }
+      connectionDot.className = policy.dotClass;
+      connectionText.textContent = policy.message;
+
+      // 只在发生变化时设置，避免频繁调用
+      if (Math.abs(video.playbackRate - rate) > 0.01) {
+        video.playbackRate = rate;
+      }
+      speedValue.textContent = rate.toFixed(2) + "x";
+    }
+
+    function showQuizModal() {
+      quizVisible = true;
+      quizFeedback.textContent = "";
+      const radios = document.querySelectorAll('input[name="quiz"]');
+      radios.forEach((r) => (r.checked = false));
+      quizBackdrop.style.display = "flex";
+    }
+
+    function hideQuizModal() {
+      quizVisible = false;
+      quizBackdrop.style.display = "none";
+      // 关闭问答后恢复播放（如果用户没手动暂停）
+      if (video && video.paused) {
+        video.play();
+      }
+    }
+
+    quizSubmitBtn.addEventListener("click", () => {
+      const selected = document.querySelector('input[name="quiz"]:checked');
+      if (!selected) {
+        quizFeedback.textContent = "请先选择一个选项。";
+        return;
+      }
+      if (selected.value === "a") {
+        quizFeedback.textContent = "回答正确，继续保持专注！";
+        setTimeout(hideQuizModal, 800);
+      } else {
+        quizFeedback.textContent = "不太对，再简单回顾一下刚才的内容吧。";
+      }
+    });
+
+    quizSkipBtn.addEventListener("click", () => {
+      quizFeedback.textContent = "已跳过本次提问。";
+      setTimeout(hideQuizModal, 600);
+    });
+
+    async function pollStatus() {
+      try {
+        const resp = await fetch(STATUS_URL, { cache: "no-store" });
+        if (!resp.ok) {
+          throw new Error("HTTP " + resp.status);
+        }
+        const data = await resp.json();
+
+        const policy = policyFor(data.regime);
+        const hr = data.hr_bpm;
+        const hrv = data.rmssd_ms;
+        const blinks = data.blink_rate_per_min;
+
+        updateBadge(policy);
+
+        hrValue.textContent =
+          hr != null ? hr.toFixed(1) + " bpm" : "-- bpm";
+        hrvValue.textContent =
+          hrv != null ? hrv.toFixed(1) + " ms" : "-- ms";
+        blinkValue.textContent =
+          blinks != null ? blinks.toFixed(0) + " / min" : "-- / min";
+
+        setPlaybackForStatus(policy);
+
+        connectionPill.style.opacity = "1";
+      } catch (err) {
+        console.error("获取状态失败:", err);
+        connectionDot.className = "pill-dot pill-dot-alert";
+        connectionText.textContent = "无法连接状态服务，请确认 Python 程序已运行";
+      }
+    }
+
+    // 初始提示
+    connectionText.textContent = "等待 Python 状态服务启动...";
+    connectionPill.style.opacity = "0.9";
+
+    // 周期轮询
+    setInterval(pollStatus, POLL_INTERVAL_MS);
+  </script>
+</body>
+</html>
+

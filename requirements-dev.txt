@@ -1,0 +1,5 @@
+# Development extras. Not needed to run the pipeline or the accuracy benchmark;
+# required only to regenerate the figures in benchmarks/results/.
+-r requirements.txt
+
+matplotlib>=3.7.0
